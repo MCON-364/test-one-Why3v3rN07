@@ -4,7 +4,7 @@ import java.util.*;
 
 public class StudyTracker {
 
-    private final Map<String, List<Integer>> scoresByLearner = new HashMap<>();
+    final Map<String, List<Integer>> scoresByLearner = new HashMap<>();
     private final Deque<UndoStep> undoStack = new ArrayDeque<>();
     // Helper methods already provided for tests and local inspection.
     public Optional<List<Integer>> scoresFor(String name) {
@@ -25,7 +25,10 @@ public class StudyTracker {
      * Throw IllegalArgumentException if name is null or blank.
      */
     public boolean addLearner(String name) {
-        throw new UnsupportedOperationException();
+        if (name == null || name.isEmpty()) throw new IllegalArgumentException("No name");
+        if (learnerNames().contains(name)) return false;
+        scoresByLearner.put(name, List.of());
+        return true;
     }
 
     /**
@@ -42,7 +45,14 @@ public class StudyTracker {
      * This operation should be undoable.
      */
     public boolean addScore(String name, int score) {
-        throw new UnsupportedOperationException();
+        if (score < 0 || score > 100) throw new IllegalArgumentException("Invalid score");
+        Optional<List<Integer>> list = scoresFor(name);
+        if (list.isPresent()) {
+            list.get().add(score);
+            undoStack.push(() -> list.get().remove(score));
+            return true;
+        }
+        else return false;
     }
 
     /**
@@ -54,7 +64,11 @@ public class StudyTracker {
      * - the learner has no scores
      */
     public Optional<Double> averageFor(String name) {
-        throw new UnsupportedOperationException();
+        Optional<List<Integer>> list = scoresFor(name);
+        if (list.isEmpty()) return Optional.empty();
+        return Optional.of(list.get().stream().mapToDouble(x -> x).average().getAsDouble());
+
+        //TODO: fix this?
     }
 
     /**
@@ -70,7 +84,17 @@ public class StudyTracker {
      * Return Optional.empty() when no average exists.
      */
     public Optional<String> letterBandFor(String name) {
-        throw new UnsupportedOperationException();
+        Optional<Double> avg = averageFor(name);
+        return switch ((int)(avg.orElse(0.0) / 10)) {
+            case 10, 9 -> Optional.of("A");
+            case 8 -> Optional.of("B");
+            case 7 -> Optional.of("C");
+            case 6 -> Optional.of("D");
+            default -> {
+                if (avg.isEmpty()) yield Optional.empty();
+                else yield Optional.of("F");
+            }
+        };
     }
 
     /**
@@ -81,7 +105,13 @@ public class StudyTracker {
      * Return false if there is nothing to undo.
      */
     public boolean undoLastChange() {
-        throw new UnsupportedOperationException();
+        try {
+            undoStack.pop().undo();
+            return true;
+        } catch (NoSuchElementException e) {
+            return false;
+        }
+
     }
 
 
